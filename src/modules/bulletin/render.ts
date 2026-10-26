@@ -1,13 +1,5 @@
 import type { IocType } from "../../generated/prisma/enums.js";
 
-/**
- * Bulletin rendering (pure): placeholder substitution + IOC defanging per
- * docs/STATES.md §3. Placeholders (bulletin/schema.ts): {{title}}
- * {{overview}} {{description}} {{ioc_block}} {{recommendations}}
- * {{references}}. Missing required final fields are reported before render
- * (PREV-02); an unfilled optional section line is dropped, never fabricated.
- */
-
 export const DEFAULT_TEMPLATE = [
   "Security Bulletin: {{title}}",
   "",
@@ -27,14 +19,15 @@ export const DEFAULT_TEMPLATE = [
   "{{references}}",
 ].join("\n");
 
-/** The org-wide template row is pinned to name "default". */
 export const DEFAULT_TEMPLATE_NAME = "default";
 
-/** Final fields a client-facing bulletin cannot ship without (PREV-02).
- * §10: recommendations/references are optional — empty ones drop out of the
- * render instead of blocking preview. */
-export const REQUIRED_PREVIEW_FIELDS = ["overview", "description"] as const;
-export type RequiredPreviewField = (typeof REQUIRED_PREVIEW_FIELDS)[number];
+export const REQUIRED_PREVIEW_FIELDS = [
+  "overview",
+  "description",
+] as const;
+
+export type RequiredPreviewField =
+  (typeof REQUIRED_PREVIEW_FIELDS)[number];
 
 export type BulletinIoc = {
   type: IocType;
@@ -55,24 +48,34 @@ function nonBlank(value: string | null): string {
   if (value === null || value.trim() === "") {
     return "";
   }
+
   return value;
 }
 
-/** Defang one IOC value by type (STATES.md §3 map). Verbatim types pass through. */
-export function defangIoc(type: IocType, value: string): string {
+/** Format IOC untuk ditampilkan dalam bulletin. */
+export function defangIoc(
+  type: IocType,
+  value: string,
+): string {
   switch (type) {
     case "DOMAIN":
     case "IPV4":
       return value.replaceAll(".", "[.]");
+
     case "IPV6":
       return value.replaceAll(":", "[:]");
+
     case "URL":
       return value
         .replace(/^http:\/\//, "hxxp://")
         .replace(/^https:\/\//, "hxxps://")
         .replaceAll(".", "[.]");
+
     case "EMAIL":
-      return value.replaceAll("@", "(at)").replaceAll(".", "[.]");
+      return value
+        .replaceAll("@", "(at)")
+        .replaceAll(".", "[.]");
+
     case "MD5":
     case "SHA1":
     case "SHA256":
@@ -81,6 +84,7 @@ export function defangIoc(type: IocType, value: string): string {
     case "CIDR":
     case "OTHER":
       return value;
+
     default: {
       const unreachable: never = type;
       return unreachable;
@@ -88,64 +92,144 @@ export function defangIoc(type: IocType, value: string): string {
   }
 }
 
-/** Final fields with no usable content yet — the PREV-02 report payload. */
-export function missingPreviewFields(data: BulletinData): RequiredPreviewField[] {
+/** Field wajib yang belum diisi untuk preview bulletin. */
+export function missingPreviewFields(
+  data: BulletinData,
+): RequiredPreviewField[] {
   const empty: Record<RequiredPreviewField, string> = {
     overview: nonBlank(data.overview),
     description: nonBlank(data.description),
   };
-  return REQUIRED_PREVIEW_FIELDS.filter((field) => empty[field] === "");
+
+  return REQUIRED_PREVIEW_FIELDS.filter(
+    (field) => empty[field] === "",
+  );
 }
 
-/** "- TYPE defanged-value" lines for the included IOCs, in input order. */
-export function renderIocBlock(iocs: BulletinIoc[]): string {
-  return iocs
-    .filter((ioc) => ioc.includeInBulletin)
-    .map((ioc) => `- ${ioc.type} ${defangIoc(ioc.type, ioc.value)}`)
-    .join("\n");
+const IOC_GROUP_LABELS: Record<IocType, string> = {
+  DOMAIN: "Domain",
+  IPV4: "IPv4",
+  IPV6: "IPv6",
+  URL: "URL",
+  EMAIL: "Email",
+  MD5: "Hash",
+  SHA1: "Hash",
+  SHA256: "Hash",
+  FILEPATH: "File path",
+  MUTEX: "Mutex",
+  CIDR: "CIDR",
+  OTHER: "Other",
+};
+
+/**
+ * Kelompokkan IOC berdasarkan jenis.
+ * MD5, SHA1, dan SHA256 masuk kelompok Hash.
+ * Hanya IOC dengan includeInBulletin aktif yang ditampilkan.
+ */
+export function renderIocBlock(
+  iocs: BulletinIoc[],
+): string {
+  const groups = new Map<string, Set<string>>();
+
+  for (const ioc of iocs) {
+    if (!ioc.includeInBulletin) {
+      continue;
+    }
+
+    const label = IOC_GROUP_LABELS[ioc.type];
+    const value = defangIoc(ioc.type, ioc.value);
+
+    const values = groups.get(label) ?? new Set<string>();
+    values.add(value);
+    groups.set(label, values);
+  }
+
+  return [...groups.entries()]
+    .map(
+      ([label, values]) =>
+        `${label}\n${[...values].join("\n")}`,
+    )
+    .join("\n\n");
 }
 
 type SectionValues = Record<
-  "title" | "overview" | "description" | "ioc_block" | "recommendations" | "references",
+  | "title"
+  | "overview"
+  | "description"
+  | "ioc_block"
+  | "recommendations"
+  | "references",
   string
 >;
 
-function sectionValues(data: BulletinData): SectionValues {
-  const references = data.references.join("\n");
+function sectionValues(
+  data: BulletinData,
+): SectionValues {
   return {
     title: data.title,
     overview: nonBlank(data.overview),
     description: nonBlank(data.description),
     recommendations: nonBlank(data.recommendations),
-    references,
+    references: data.references.join("\n"),
     ioc_block: renderIocBlock(data.iocs),
   };
 }
 
-const PLACEHOLDER = /\{\{(title|overview|description|ioc_block|recommendations|references)\}\}/g;
+const PLACEHOLDER =
+  /\{\{(title|overview|description|ioc_block|recommendations|references)\}\}/g;
 
-function placeholderKeys(line: string): (keyof SectionValues)[] {
+function placeholderKeys(
+  line: string,
+): (keyof SectionValues)[] {
   const found = line.match(PLACEHOLDER);
-  return (found ?? []).map((name) => name.slice(2, -2) as keyof SectionValues);
+
+  return (found ?? []).map(
+    (name) =>
+      name.slice(2, -2) as keyof SectionValues,
+  );
 }
 
-/** Render the template: substitute placeholders. A line whose placeholders all
- * resolve to "" is dropped, together with a trailing-colon label line directly
- * above it — unfilled optional sections leave no orphan headers and no
- * fabricated text (BUL-01); blank runs collapse. */
-export function renderBulletin(template: string, data: BulletinData): string {
+/**
+ * Isi placeholder template.
+ * Section kosong dihilangkan bersama labelnya.
+ */
+export function renderBulletin(
+  template: string,
+  data: BulletinData,
+): string {
   const values = sectionValues(data);
   const output: string[] = [];
+
   for (const line of template.split("\n")) {
     const keys = placeholderKeys(line);
-    if (keys.length > 0 && keys.every((key) => values[key] === "")) {
+
+    if (
+      keys.length > 0 &&
+      keys.every((key) => values[key] === "")
+    ) {
       const previous = output[output.length - 1];
-      if (previous !== undefined && previous.trimEnd().endsWith(":")) {
+
+      if (
+        previous !== undefined &&
+        previous.trimEnd().endsWith(":")
+      ) {
         output.pop();
       }
+
       continue;
     }
-    output.push(line.replace(PLACEHOLDER, (_match, key: keyof SectionValues) => values[key]));
+
+    output.push(
+      line.replace(
+        PLACEHOLDER,
+        (_match, key: keyof SectionValues) =>
+          values[key],
+      ),
+    );
   }
-  return output.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+
+  return output
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }

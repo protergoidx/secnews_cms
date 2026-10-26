@@ -1,1 +1,395 @@
 @import "tailwindcss";
+
+:root {
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  color-scheme: dark;
+
+  --sn-background: #181b20;
+  --sn-sidebar: #14171b;
+  --sn-card: #22262d;
+  --sn-inset: #1b1f25;
+  --sn-border: #353b44;
+  --sn-text: #e5e7eb;
+  --sn-muted: #a1a8b3;
+  --sn-accent: #5b91b8;
+}
+
+html {
+  min-width: 320px;
+  background: var(--sn-background);
+}
+
+body {
+  margin: 0;
+  background: var(--sn-background);
+  color: var(--sn-text);
+  line-height: 1.5;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+button:not(:disabled),
+select:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid #8ab4d3;
+  outline-offset: 3px;
+}
+
+::selection {
+  background: #36536b;
+  color: #ffffff;
+}
+
+/* Application surfaces */
+
+#root .bg-slate-100 {
+  background-color: var(--sn-background);
+}
+
+#root .bg-white {
+  background-color: var(--sn-card);
+}
+
+#root .bg-slate-50 {
+  background-color: var(--sn-inset);
+}
+
+#root .bg-slate-900 {
+  background-color: var(--sn-sidebar);
+}
+
+#root .bg-slate-800 {
+  background-color: #2a3038;
+}
+
+/* Text */
+
+#root .text-slate-900,
+#root .text-slate-800 {
+  color: #edf0f3;
+}
+
+#root .text-slate-700 {
+  color: #c7cdd5;
+}
+
+#root .text-slate-600,
+#root .text-slate-500,
+#root .text-slate-400 {
+  color: var(--sn-muted);
+}
+
+#root .text-indigo-500,
+#root .text-indigo-600,
+#root .text-indigo-700,
+#root .text-cyan-700,
+#root .text-cyan-800 {
+  color: #94b9d5;
+}
+
+#root .text-indigo-300,
+#root .text-cyan-400 {
+  color: #a3bfd4;
+}
+
+#root .text-emerald-600,
+#root .text-emerald-700 {
+  color: #98c8aa;
+}
+
+#root .text-red-600,
+#root .text-red-700 {
+  color: #e4a0a0;
+}
+
+#root .text-amber-700 {
+  color: #d8be87;
+}
+
+/* Borders */
+
+#root .border,
+#root .border-t,
+#root .border-b,
+#root .border-l,
+#root .border-r,
+#root .border-slate-100,
+#root .border-slate-200,
+#root .border-slate-800 {
+  border-color: var(--sn-border);
+}
+
+#root .divide-y > :not(:last-child) {
+  border-color: var(--sn-border);
+}
+
+#root .border-indigo-300 {
+  border-color: #5b7890;
+}
+
+#root .border-red-200 {
+  border-color: #694447;
+}
+
+#root .shadow-sm {
+  box-shadow: 0 2px 6px rgb(0 0 0 / 10%);
+}
+
+/* Inputs */
+
+#root input:not([type="checkbox"]):not([type="radio"]),
+#root textarea,
+#root select {
+  background-color: var(--sn-inset);
+  border-color: #414852;
+  border-radius: 5px;
+  color: var(--sn-text);
+}
+
+#root input::placeholder,
+#root textarea::placeholder {
+  color: #929aa6;
+}
+
+#root input:focus,
+#root textarea:focus,
+#root select:focus {
+  border-color: #7da6c5;
+}
+
+#root input[type="checkbox"],
+#root input[type="radio"] {
+  accent-color: #5b91b8;
+}
+
+#root input:disabled,
+#root textarea:disabled,
+#root select:disabled {
+  opacity: 0.6;
+}
+
+#root textarea {
+  line-height: 1.65;
+}
+
+#root input[type="date"],
+#root input[type="month"] {
+  color-scheme: dark;
+}
+
+/* Primary actions */
+
+#root .bg-indigo-600 {
+  background-color: #426f90;
+  color: #ffffff;
+}
+
+#root .hover\:bg-indigo-500:hover {
+  background-color: #507f9f;
+}
+
+#root .hover\:text-indigo-500:hover {
+  color: #bdd2e2;
+}
+
+#root .bg-emerald-600,
+#root .bg-emerald-700 {
+  background-color: #39694e;
+  color: #ffffff;
+}
+
+#root .hover\:bg-emerald-500:hover {
+  background-color: #447c5c;
+}
+
+/* Secondary actions */
+
+#root .hover\:bg-slate-100:hover,
+#root .hover\:bg-slate-50:hover,
+#root .hover\:bg-slate-800:hover {
+  background-color: #303640;
+}
+
+#root .hover\:bg-red-50:hover {
+  background-color: #432b30;
+}
+
+/* Selected navigation */
+
+#root aside a[aria-current="page"] {
+  background-color: #283b49;
+  color: #d0e0ec;
+  box-shadow: inset 3px 0 0 #7da6c5;
+}
+
+#root aside {
+  border-right: 1px solid #30353d;
+}
+
+/* Status backgrounds */
+
+#root .bg-indigo-50,
+#root .bg-indigo-100,
+#root .bg-cyan-50,
+#root .bg-cyan-100 {
+  background-color: #293b49;
+}
+
+#root .bg-emerald-50,
+#root .bg-emerald-100 {
+  background-color: #283d32;
+}
+
+#root .bg-amber-50,
+#root .bg-amber-100 {
+  background-color: #403929;
+}
+
+#root .bg-red-50,
+#root .bg-red-100 {
+  background-color: #432d32;
+}
+
+/* Tables */
+
+#root table {
+  border-collapse: collapse;
+}
+
+#root th {
+  background-color: #1d2127;
+  color: #b4bdc9;
+  font-weight: 600;
+}
+
+#root th,
+#root td {
+  vertical-align: top;
+}
+
+#root tbody tr {
+  transition: background-color 120ms ease;
+}
+
+#root tbody tr:hover {
+  background-color: rgb(180 190 205 / 5%);
+}
+
+#root .table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Technical content */
+
+#root pre,
+#root code,
+#root .font-mono {
+  font-family:
+    "Cascadia Code",
+    Consolas,
+    "Courier New",
+    monospace;
+}
+
+#root pre {
+  line-height: 1.65;
+  tab-size: 2;
+}
+
+#root pre.bg-slate-900 {
+  background-color: #171a1f;
+  color: var(--sn-text);
+}
+
+/* Dashboard charts */
+
+#root .recharts-cartesian-grid line {
+  stroke: #353b44;
+}
+
+#root .recharts-cartesian-axis-tick-value {
+  fill: #a1a8b3;
+}
+
+#root .recharts-default-tooltip {
+  background-color: #22262d !important;
+  border-color: #4a525e !important;
+  border-radius: 5px;
+  color: #e5e7eb;
+}
+
+#root .recharts-tooltip-label {
+  color: #e5e7eb;
+}
+
+/* Scrollbars */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #505762 #1b1f25;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1b1f25;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #505762;
+  border: 2px solid #1b1f25;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #687180;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}

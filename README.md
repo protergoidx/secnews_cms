@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # SecNews CMS
 
 Security-news aggregation CMS: Fastify API (`src/`), React/Vite web UI (`web/`), PostgreSQL. Everything below is reproducible from a clean clone.
@@ -137,3 +138,6 @@ npm run test:e2e
 ## WhatsApp (WAHA) — external service
 
 WAHA is **not** part of the compose stack — it is an externally hosted WhatsApp gateway that WhatsApp channel deliveries require to be reachable. Configure it in the **Integrations** menu (ADMIN role): gateway URL, session and API key are stored encrypted in the database and testable from the UI. `WAHA_BASE_URL` / `WAHA_SESSION` / `WAHA_API_KEY` env vars still work as a code-level fallback, but they are not in `.env.example` and not needed. The e2e suite stubs WAHA, so tests never call it.
+=======
+# Secnews-cms
+>>>>>>> origin/main

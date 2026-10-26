@@ -1,254 +1,289 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router";
+import {
+  NavLink,
+  Outlet,
+  useNavigate,
+} from "react-router";
 import {
   decodeTokenExp,
   formatSessionCountdown,
 } from "../lib/sessionCountdown";
-import { clearToken, useSession } from "../lib/tokenStore";
+import {
+  clearToken,
+  useSession,
+} from "../lib/tokenStore";
 
 const NAV_COLLAPSED_KEY = "secnews_nav_collapsed";
-const SESSION_REFRESH_MS = 30_000;
 
-const GUEST_ITEMS = [
+type NavItem = {
+  to: string;
+  label: string;
+};
+
+const GUEST_ITEMS: NavItem[] = [
   { to: "/login", label: "Login" },
   { to: "/bootstrap", label: "Bootstrap" },
-] as const;
+];
 
-const DASHBOARD_ITEM = { to: "/dashboard", label: "Dashboard" } as const;
-
-/** Feed-source configuration is manager-only; triage entries suit every role. */
-const MGR_ITEMS = [
-  { to: "/feeds", label: "Feeds" },
-] as const;
-
-const MEMBER_ITEMS = [
-  { to: "/reports", label: "Reports" },
-  { to: "/feeds/items", label: "Feed items" },
-  { to: "/tickets", label: "Tickets" },
-  { to: "/clients", label: "Clients" },
-  { to: "/bulletin", label: "Bulletin" },
-  { to: "/otx", label: "OTX pulses" },
-] as const;
-
-const ADMIN_ITEMS = [
+const ADMIN_ITEMS: NavItem[] = [
   { to: "/integrations", label: "Integrations" },
   { to: "/email-template", label: "Email template" },
   { to: "/prompts", label: "Prompts" },
   { to: "/users", label: "Users" },
-] as const;
+];
 
-/** Inline SVG icon paths (24×24 stroke) keyed by route — DESIGN.md: inline
- * SVG only, no icon-font deps. */
-const NAV_ICONS: Readonly<Record<string, string>> = {
-  "/login": "M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3",
-  "/bootstrap": "M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16ZM3.3 7 12 12l8.7-5M12 22V12",
-  "/feeds": "M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16M6 20a2 2 0 1 0-4 0 2 2 0 0 0 4 0",
-  "/feeds/items": "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
-  "/tickets": "M2 9a3 3 0 0 1 0 6v3a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3a3 3 0 0 1 0-6V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2ZM13 5v2M13 17v2M13 11v2",
-  "/dashboard": "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
-  "/reports": "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M10 13H8M16 17H8M10 9H8",
-  "/clients": "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75",
-  "/bulletin": "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7ZM14 2v5h5M16 13H8M16 17H8M10 9H8",
-  "/otx": "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10",
-  "/integrations": "M13 2 3 14h9l-1 8 10-12h-9l1-8z",
-  "/email-template": "M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2ZM22 6l-10 7L2 6",
-  "/prompts": "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M10 13l-2 2 2 2M14 13l2 2-2 2",
-  "/users": "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8",
-  "/account": "M18 20a6 6 0 0 0-12 0M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0",
-};
-
-const LOGOUT_ICON = "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9";
-const BRAND_ICON = "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z";
-const COLLAPSE_ICON = "M11 17l-5-5 5-5M18 17l-5-5 5-5";
-const EXPAND_ICON = "M13 17l5-5-5-5M6 17l5-5-5-5";
-
-function NavIcon({ d, className }: { d: string; className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className ?? "h-4 w-4 shrink-0"}
-    >
-      <path d={d} />
-    </svg>
-  );
-}
-
-const navLinkClass =
-  (collapsed: boolean) =>
-  ({ isActive }: { isActive: boolean }): string =>
-    `flex items-center gap-2 rounded-md py-2 text-sm ${
-      collapsed ? "justify-center px-2" : "px-3"
-    } ${isActive ? "bg-indigo-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`;
-
-/** First letters of the first two name words (or the word's first two chars). */
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/);
   const first = parts[0] ?? "";
   const second = parts[1] ?? "";
-  const head =
-    second === "" ? first.slice(0, 2) : `${first.charAt(0)}${second.charAt(0)}`;
-  return head.toUpperCase();
+
+  return (
+    second === ""
+      ? first.slice(0, 2)
+      : `${first.charAt(0)}${second.charAt(0)}`
+  ).toUpperCase();
 }
 
-const avatarClass =
-  "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-semibold uppercase text-white";
-
-function useTicker(intervalMs: number): number {
+function SessionCountdown({
+  token,
+}: {
+  token: string;
+}) {
   const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), intervalMs);
-    return () => window.clearInterval(timer);
-  }, [intervalMs]);
-  return now;
-}
 
-/** "Session <Mm> left" from the token's exp claim, refreshed every 30s; red
- * under two minutes, "expired" at zero (the next API call 401-logs out). */
-function SessionCountdown({ token }: { token: string }) {
-  const now = useTicker(SESSION_REFRESH_MS);
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(Date.now());
+    }, 30_000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
   const exp = decodeTokenExp(token);
-  if (exp === null) return null;
+
+  if (exp === null) {
+    return null;
+  }
+
   const countdown = formatSessionCountdown(exp, now);
+
   return (
     <p
-      className={`mt-1 text-xs ${countdown.warning ? "text-red-400" : "text-slate-400"}`}
+      className={`mt-1 text-xs ${
+        countdown.warning
+          ? "text-red-400"
+          : "text-slate-400"
+      }`}
     >
       {countdown.text}
     </p>
   );
 }
 
-/** App layout: dark sidebar rail whose user block and nav follow the live
- * session; the rail collapses to an icon-only strip persisted in localStorage. */
 export function AppShell() {
   const { token, user } = useSession();
   const navigate = useNavigate();
+
   const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem(NAV_COLLAPSED_KEY) === "1",
+    () =>
+      localStorage.getItem(NAV_COLLAPSED_KEY) === "1",
   );
 
-  const toggleCollapsed = (): void => {
-    setCollapsed((current) => {
-      localStorage.setItem(NAV_COLLAPSED_KEY, current ? "0" : "1");
-      return !current;
-    });
-  };
+  const isManager =
+    user?.role === "ADMIN" ||
+    user?.role === "EDITOR";
 
-  const isMgr = user?.role === "ADMIN" || user?.role === "EDITOR";
+  const canUseResearch =
+    user?.role === "ADMIN" ||
+    user?.role === "EDITOR" ||
+    user?.role === "ANALYST";
+
+  const memberItems: NavItem[] = [
+    ...(canUseResearch
+      ? [{ to: "/dashboard", label: "Dashboard" }]
+      : []),
+    ...(isManager
+      ? [{ to: "/feeds", label: "Feeds" }]
+      : []),
+    ...(canUseResearch
+      ? [{ to: "/reports", label: "Reports" }]
+      : []),
+    { to: "/feeds/items", label: "Feed items" },
+    { to: "/tickets", label: "Tickets" },
+    {
+      to: "/research-tools",
+      label: "Recap & IOC library",
+    },
+    { to: "/clients", label: "Clients" },
+    { to: "/bulletin", label: "Bulletin" },
+    ...(canUseResearch
+      ? [{ to: "/otx", label: "OTX pulses" }]
+      : []),
+    ...(user?.role === "ADMIN" ? ADMIN_ITEMS : []),
+  ].filter(
+    (item) =>
+      item.to !== "/research-tools" ||
+      canUseResearch,
+  );
+
   const items =
-    token === null
-      ? GUEST_ITEMS
-      : [
-          DASHBOARD_ITEM,
-          ...(isMgr ? MGR_ITEMS : []),
-          ...MEMBER_ITEMS,
-          ...(user?.role === "ADMIN" ? ADMIN_ITEMS : []),
-        ];
-  const logout = (): void => {
+    token === null ? GUEST_ITEMS : memberItems;
+
+  function toggleCollapsed(): void {
+    const next = !collapsed;
+
+    localStorage.setItem(
+      NAV_COLLAPSED_KEY,
+      next ? "1" : "0",
+    );
+
+    setCollapsed(next);
+  }
+
+  function logout(): void {
     clearToken();
     navigate("/login");
-  };
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-100 text-slate-900">
       <aside
-        className={`flex shrink-0 flex-col bg-slate-900 p-4 ${
+        className={`sticky top-0 flex h-dvh shrink-0 flex-col overflow-hidden bg-slate-900 text-slate-100 ${
           collapsed ? "w-16" : "w-60"
         }`}
       >
-        <div
-          className={
-            collapsed
-              ? "mb-4 flex flex-col items-center gap-2"
-              : "mb-4 flex items-center justify-between px-3"
-          }
-        >
-          {collapsed ? (
-            <NavIcon d={BRAND_ICON} className="h-5 w-5 shrink-0 text-white" />
-          ) : (
-            <div className="text-sm font-semibold tracking-wide text-white uppercase">
-              SecNews CMS
-            </div>
-          )}
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-800 px-3 py-4">
+          {!collapsed ? (
+            <NavLink
+              to="/"
+              className="text-sm font-bold tracking-wide text-white"
+            >
+              SECNEWS CMS
+            </NavLink>
+          ) : null}
+
           <button
             type="button"
             onClick={toggleCollapsed}
+            aria-label={
+              collapsed
+                ? "Expand navigation"
+                : "Collapse navigation"
+            }
             aria-expanded={!collapsed}
             aria-controls="primary-nav"
-            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
-            className="rounded-md p-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
+            title={
+              collapsed
+                ? "Expand navigation"
+                : "Collapse navigation"
+            }
+            className="rounded-md px-2 py-1 text-slate-300 hover:bg-slate-800 hover:text-white"
           >
-            <NavIcon d={collapsed ? EXPAND_ICON : COLLAPSE_ICON} />
+            {collapsed ? "»" : "«"}
           </button>
         </div>
-        {user !== null ? (
-          <div
-            role="group"
-            aria-label="Signed-in user"
-            className={
-              collapsed
-                ? "mb-4 flex flex-col items-center gap-1"
-                : "mb-4 flex flex-col gap-1 rounded-md border border-slate-700 p-2"
-            }
-          >
-            <div className={collapsed ? "flex justify-center pt-1" : "flex items-center gap-2 px-1 py-1"}>
-              <span aria-hidden="true" title={`${user.name} — ${user.role}`} className={avatarClass}>
-                {initialsOf(user.name)}
-              </span>
-              {collapsed ? null : (
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-white">{user.name}</p>
-                  <span className="mt-0.5 inline-block rounded-md bg-slate-800 px-1.5 py-0.5 text-xs text-slate-300">
-                    {user.role}
-                  </span>
-                  {token !== null ? <SessionCountdown token={token} /> : null}
-                </div>
-              )}
-            </div>
-            <NavLink
-              to="/account"
-              className={navLinkClass(collapsed)}
-              title="Account"
-            >
-              <NavIcon d={NAV_ICONS["/account"]} />
-              <span className={collapsed ? "hidden" : undefined}>Account</span>
-            </NavLink>
-            <button
-              type="button"
-              onClick={logout}
-              title="Logout"
-              className={
-                collapsed
-                  ? "flex justify-center rounded-md p-2 text-slate-300 hover:bg-slate-800 hover:text-white"
-                  : "flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
-              }
-            >
-              <NavIcon d={LOGOUT_ICON} />
-              {collapsed ? null : <span>Logout</span>}
-            </button>
-          </div>
-        ) : null}
-        <nav id="primary-nav" aria-label="Primary" className="flex flex-col gap-1">
+
+        <nav
+          id="primary-nav"
+          aria-label="Primary"
+          className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3"
+        >
           {items.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === "/feeds"}
-              className={navLinkClass(collapsed)}
               title={item.label}
+              aria-label={item.label}
+              className={({ isActive }) =>
+                [
+                  "flex items-center rounded-md py-2.5 text-sm transition-colors",
+                  collapsed
+                    ? "justify-center px-1"
+                    : "px-3",
+                  isActive
+                    ? "bg-indigo-600 font-medium text-white"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white",
+                ].join(" ")
+              }
             >
-              <NavIcon d={NAV_ICONS[item.to] ?? NAV_ICONS["/account"]} />
-              <span className={collapsed ? "hidden" : undefined}>{item.label}</span>
+              {collapsed ? (
+                <span
+                  aria-hidden="true"
+                  className="text-xs font-semibold"
+                >
+                  {initialsOf(item.label)}
+                </span>
+              ) : (
+                item.label
+              )}
             </NavLink>
           ))}
         </nav>
+
+        {user !== null ? (
+          <div
+            role="group"
+            aria-label="Signed-in user"
+            className="shrink-0 border-t border-slate-800 p-3"
+          >
+            <NavLink
+              to="/account"
+              aria-label="Open profile"
+              title={user.name}
+              className={`flex items-center gap-3 rounded-md ${
+                collapsed ? "justify-center" : ""
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-semibold text-white"
+              >
+                {initialsOf(user.name)}
+              </span>
+
+              {!collapsed ? (
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-white">
+                    {user.name}
+                  </p>
+
+                  <span className="text-xs text-indigo-300">
+                    {user.role}
+                  </span>
+
+                  {token !== null ? (
+                    <SessionCountdown token={token} />
+                  ) : null}
+                </div>
+              ) : null}
+            </NavLink>
+
+            <div className="mt-3 flex flex-col gap-1">
+              <NavLink
+                to="/account"
+                title="Account"
+                aria-label="Account"
+                className="rounded-md px-2 py-2 text-center text-xs text-slate-300 hover:bg-slate-800 hover:text-white"
+              >
+                {collapsed ? "AC" : "Account"}
+              </NavLink>
+
+              <button
+                type="button"
+                onClick={logout}
+                title="Logout"
+                aria-label="Logout"
+                className="rounded-md px-2 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white"
+              >
+                {collapsed ? "OUT" : "Logout"}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </aside>
-      <main className="flex-1 p-6">
+
+      <main className="min-w-0 flex-1 p-4 md:p-6">
         <Outlet />
       </main>
     </div>
