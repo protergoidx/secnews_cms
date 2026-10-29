@@ -10,6 +10,7 @@ import {
   useUpdateIoc,
 } from "../../lib/useTickets";
 import { BulkIocInput } from "./BulkIocInput";
+import { IocTextImport } from "./IocTextImport";
 
 interface IocTableProps {
   ticketId: string;
@@ -67,9 +68,9 @@ export function IocTable({ ticketId, iocs }: IocTableProps) {
       </h2>
 
       <p className="mt-1 text-sm text-slate-500">
-        Add indicators individually or use bulk input below.
-        Only included indicators appear in the bulletin and
-        OTX push.
+        Add indicators manually, extract them from text, or use
+        bulk input. Only included indicators appear in the
+        bulletin and OTX push.
       </p>
 
       {iocs.length === 0 ? (
@@ -87,24 +88,28 @@ export function IocTable({ ticketId, iocs }: IocTableProps) {
                 >
                   Type
                 </th>
+
                 <th
                   scope="col"
                   className="py-2 pr-4 font-medium"
                 >
                   Value
                 </th>
+
                 <th
                   scope="col"
                   className="py-2 pr-4 font-medium"
                 >
                   Context
                 </th>
+
                 <th
                   scope="col"
                   className="whitespace-nowrap py-2 pr-4 font-medium"
                 >
                   In bulletin
                 </th>
+
                 <th
                   scope="col"
                   className="py-2 font-medium"
@@ -179,7 +184,7 @@ export function IocTable({ ticketId, iocs }: IocTableProps) {
         </div>
       )}
 
-      {rowActionError !== null ? (
+      {rowActionError != null ? (
         <p
           role="alert"
           className="mt-3 text-sm text-red-600"
@@ -276,8 +281,13 @@ export function IocTable({ ticketId, iocs }: IocTableProps) {
         ) : null}
       </form>
 
+      <IocTextImport
+        key={`text-${ticketId}`}
+        ticketId={ticketId}
+      />
+
       <BulkIocInput
-        key={ticketId}
+        key={`bulk-${ticketId}`}
         ticketId={ticketId}
       />
     </section>
