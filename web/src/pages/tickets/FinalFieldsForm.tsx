@@ -6,6 +6,10 @@ import {
   type Tlp,
 } from "../../lib/ticketsApi";
 import { usePatchTicketFields } from "../../lib/useTickets";
+import {
+  RecommendationsInput,
+  formatRecommendations,
+} from "./RecommendationsInput";
 
 interface FinalFieldsFormProps {
   ticket: TicketDetail;
@@ -18,17 +22,23 @@ export function FinalFieldsForm({
   ticket,
 }: FinalFieldsFormProps) {
   const [title, setTitle] = useState(ticket.title);
+
   const [overview, setOverview] = useState(
     ticket.overview ?? "",
   );
+
   const [description, setDescription] = useState(
     ticket.description ?? "",
   );
-  const [recommendations, setRecommendations] =
-    useState(ticket.recommendations ?? "");
+
+  const [recommendations, setRecommendations] = useState(
+    formatRecommendations(ticket.recommendations ?? ""),
+  );
+
   const [references, setReferences] = useState(
     ticket.references.join("\n"),
   );
+
   const [tlp, setTlp] = useState<Tlp>(ticket.tlp);
   const [saved, setSaved] = useState(false);
 
@@ -38,8 +48,7 @@ export function FinalFieldsForm({
   const patchFields = usePatchTicketFields();
 
   /*
-   * Saat query ticket mendapat data baru setelah Accept AI,
-   * sinkronkan hanya field yang berubah di server.
+   * Sinkronkan field yang berubah di server setelah Accept AI.
    * Edit lokal pada field lain tetap dipertahankan.
    */
   if (previousTicket !== ticket) {
@@ -74,7 +83,11 @@ export function FinalFieldsForm({
       previousTicket.recommendations !==
         ticket.recommendations
     ) {
-      setRecommendations(ticket.recommendations ?? "");
+      setRecommendations(
+        formatRecommendations(
+          ticket.recommendations ?? "",
+        ),
+      );
     }
 
     if (
@@ -108,6 +121,10 @@ export function FinalFieldsForm({
       return;
     }
 
+    const formattedRecommendations =
+      formatRecommendations(recommendations);
+
+    setRecommendations(formattedRecommendations);
     setSaved(false);
 
     patchFields.mutate(
@@ -117,7 +134,7 @@ export function FinalFieldsForm({
           title: title.trim(),
           overview,
           description,
-          recommendations,
+          recommendations: formattedRecommendations,
           references: references
             .split("\n")
             .map((line) => line.trim())
@@ -139,8 +156,7 @@ export function FinalFieldsForm({
 
       <p className="mt-1 text-sm text-slate-500">
         Review the bulletin content before saving.
-        Translation previews can be applied to each
-        field.
+        Translation previews can be applied to each field.
       </p>
 
       <form
@@ -229,28 +245,23 @@ export function FinalFieldsForm({
           </div>
 
           <div>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-slate-500">
-                Recommendations
-              </span>
-
-              <textarea
-                aria-label="Recommendations"
-                rows={8}
-                value={recommendations}
-                onChange={(event) => {
-                  setRecommendations(event.target.value);
-                  markEdited();
-                }}
-                className={`${inputClass} min-h-44 resize-y`}
-              />
-            </label>
+            <RecommendationsInput
+              value={recommendations}
+              disabled={patchFields.isPending}
+              onChange={(nextValue) => {
+                setRecommendations(nextValue);
+                markEdited();
+              }}
+              className={`${inputClass} min-h-44 resize-y`}
+            />
 
             <TranslateButton
               key={`${ticket.id}-recommendations`}
               text={recommendations}
               onApply={(translation) => {
-                setRecommendations(translation);
+                setRecommendations(
+                  formatRecommendations(translation),
+                );
                 markEdited();
               }}
             />

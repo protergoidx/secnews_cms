@@ -1,4 +1,5 @@
 import type { IocType } from "../../generated/prisma/enums.js";
+import { formatRecommendations } from "../../common/recommendations.js";
 
 export const DEFAULT_TEMPLATE = [
   "Security Bulletin: {{title}}",
@@ -169,7 +170,7 @@ function sectionValues(
     title: data.title,
     overview: nonBlank(data.overview),
     description: nonBlank(data.description),
-    recommendations: nonBlank(data.recommendations),
+    recommendations: formatRecommendations(data.recommendations),
     references: data.references.join("\n"),
     ioc_block: renderIocBlock(data.iocs),
   };

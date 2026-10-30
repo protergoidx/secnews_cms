@@ -396,3 +396,26 @@ html[data-theme="light"] {
     animation: none !important;
   }
 }
+
+/* Unresolved suggestions banner — dark theme */
+html[data-theme="dark"] #root .suggestions-warning {
+  background-color: #332d21;
+  border-color: #8c723a;
+  color: #f7dfa7;
+}
+
+html[data-theme="dark"] #root .suggestions-warning a {
+  color: #ffe3a0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+html[data-theme="dark"] #root .suggestions-warning a:hover {
+  color: #ffffff;
+}
+
+#root .suggestions-warning a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 2px;
+}

@@ -1,0 +1,10 @@
+Domain
+login-check.example.com
+Context: The same training domain appeared in test logs.
+
+IPv4
+192[.]0[.]2[.]25
+Context: Documentation-only test server.
+
+References
+https://reports.example.com/training

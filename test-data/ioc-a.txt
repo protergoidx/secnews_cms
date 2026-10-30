@@ -1,0 +1,3 @@
+Domain
+login-check[.]example[.]com
+Context: Simulated phishing domain from a training email.
